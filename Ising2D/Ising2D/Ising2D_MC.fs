@@ -1,6 +1,7 @@
 ﻿module Ising2D_MC
 
-let private L = 20
+let private L = 256
+let mutable flips = 0
 
 type private Ising2DContext = {
     AdjacencyMatrix : (int * int)[,,]
@@ -33,15 +34,17 @@ with
 
 let private Jij = 1.0
 
+let private context = Ising2DContext.singleton
+
 let inline private interactionEnergy flip (spins : bool[,]) (x, y) =
-    let inline spinEnergy s1 s2 = Jij * if (s1 = s2) then -1.0 else +1.0
+    let inline spinEnergy s1 s2 = Jij * if (s1 = s2) then 1.0 else -1.0
 
     let spin = if flip then not spins.[x, y] else spins.[x, y]
 
     let mutable energy = 0.0
     for p in 0..3 do
-        let (nx, ny) = Ising2DContext.singleton.AdjacencyMatrix.[x, y, p]
-        energy <- energy + spinEnergy spin (spins.[nx, ny])
+        let (nx, ny) = context.AdjacencyMatrix.[x, y, p]
+        energy <- energy - spinEnergy spin (spins.[nx, ny])
     energy
 
 type private Ising2D = {
@@ -52,12 +55,11 @@ with
     static member Random () =
         let spins = Array2D.init<bool> L L (fun _ _ -> match System.Random.Shared.Next(2) with | 0 -> false | _ -> true)
 
-        let mutable energy = 0.0
+        let mutable h = 0.0
         for y in 0 .. (L - 1) do
             for x in 0 .. (L - 1) do
-                energy <- energy + interactionEnergy false spins (x, y)
+                h <- h + interactionEnergy false spins (x, y)
 
-        let h = -energy
         { Spins = spins; H = h }
 
     override this.ToString() =
@@ -86,6 +88,7 @@ let SolveMC (temp : float) (num_iterations : int) =
             if dE <= 0.0
             then true
             else
+                do flips <- flips + 1
                 let probability = exp(-dE/temp)
                 let random = System.Random.Shared.NextDouble()
                 probability >= random
@@ -104,4 +107,4 @@ let SolveMC (temp : float) (num_iterations : int) =
     let finish = System.DateTime.Now
     printfn "After : \n%O : %s" lattice (finish.ToString("r"))
     let duration = finish - start
-    printfn $"F# - Solving Ising2D {L} x {L} ({num_iterations} iterations) at {temp}K took {duration.TotalMilliseconds} ms"
+    printfn $"F# - Solving Ising2D {L} x {L} ({num_iterations} iterations) at {temp}K took {duration.TotalMilliseconds} ms. {flips} spins were flipped."
