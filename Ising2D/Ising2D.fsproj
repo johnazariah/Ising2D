@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Ising2D_MC.fs" />
+    <Compile Include="Common.fs" />
+    <Compile Include="Metropolis.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
