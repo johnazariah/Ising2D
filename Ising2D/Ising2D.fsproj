@@ -6,8 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="BRKGA.fs" />
     <Compile Include="Common.fs" />
     <Compile Include="Metropolis.fs" />
+    <Compile Include="Genetic.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

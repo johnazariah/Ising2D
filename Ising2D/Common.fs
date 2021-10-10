@@ -1,6 +1,6 @@
 ﻿module Common
 
-let L = 70
+let L = 10
 
 type private Ising2DContext = {
     AdjacencyMatrix : (int * int)[,,]
@@ -31,14 +31,14 @@ with
 
         sb.ToString()
 
-
 let private context = Ising2DContext.singleton
 let private Jij = 1.0
 
-let interactionEnergy flip (spins : bool[,]) (x, y) =
+let interactionEnergy flip (spins : bool[,]) x y =
     let inline spinEnergy s1 s2 = Jij * if (s1 = s2) then 1.0 else -1.0
 
-    let spin = if flip then not spins.[x, y] else spins.[x, y]
+    let spin' = spins.[x, y]
+    let spin = if flip then not spin' else spin'
 
     let mutable energy = 0.0
     for p in 0..3 do
@@ -52,13 +52,14 @@ type Ising2D = {
     H : float
 }
 with
+    static member Apply spins h = { Spins = spins; H = h }
     static member Random () =
         let spins = Array2D.init<bool> L L (fun _ _ -> match System.Random.Shared.Next(2) with | 0 -> false | _ -> true)
 
         let mutable h = 0.0
         for y in 0 .. (L - 1) do
             for x in 0 .. (L - 1) do
-                h <- h + interactionEnergy false spins (x, y)
+                h <- h + interactionEnergy false spins x y
 
         { Spins = spins; H = h }
 
@@ -67,7 +68,7 @@ with
         ignore <| sb.AppendLine("Ising2D : \n{")
         ignore <| sb.AppendLine("spins : \n\t{")
         for y in 0 .. (L - 1) do
-            ignore <| sb.Append("\t\t[")
+            ignore <| sb.Append("\t\t[ ")
             for x in 0 .. (L - 1) do
                 ignore <| sb.Append (if this.Spins.[x, y] then "+ " else "0 ")
             ignore <| sb.AppendLine("]")
