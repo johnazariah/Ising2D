@@ -1,22 +1,30 @@
 ﻿module Common
 
-let L = 10
+let L = 20
 
-type private Ising2DContext = {
-    AdjacencyMatrix : (int * int)[,,]
-}
+let inline private neighbour (x, y, p) =
+    match p with
+    | 0 -> ((x + 1) % L), (y)
+    | 1 -> ((x + L - 1) % L), (y)
+    | 2 -> (x), ((y + 1) % L)
+    | 3 -> (x), ((y + L - 1) % L)
+    | _ -> failwith "how?"
+
+type private JijMatrix = JijMatrix of float[,,]
 with
-    static member singleton =
-        let adj =
-            Array3D.init<int*int> L L 4 (fun x y -> function
-                | 0 -> ((x + 1) % L), (y)
-                | 1 -> ((x + L - 1) % L), (y)
-                | 2 -> (x), ((y + 1) % L)
-                | 3 -> (x), ((y + L - 1) % L)
-                | _ -> failwith "how?")
-        { AdjacencyMatrix = adj }
+    member inline this.Unapply = match this with | JijMatrix x -> x
+
+    static member ConstantFerromagnet =
+        Array3D.init<float> L L 4 (fun x y -> function
+            | 0 -> 1.0 //((x + 1) % L), (y)
+            | 1 -> 1.0 //((x + L - 1) % L), (y)
+            | 2 -> 1.0 //(x), ((y + 1) % L)
+            | 3 -> 1.0 //(x), ((y + L - 1) % L)
+            | _ -> failwith "how?")
+        |> JijMatrix
 
     override this.ToString() =
+        let jij = this.Unapply
         let sb = System.Text.StringBuilder()
 
         ignore <| sb.AppendLine("Ising2DContext : \n{")
@@ -24,28 +32,27 @@ with
             for x in 0 .. (L - 1) do
                 ignore <| sb.Append($"\t ({x}, {y}) -> [ ")
                 for p in 0..3 do
-                    let (a, b) = this.AdjacencyMatrix.[x,y,p]
-                    ignore <| sb.Append($"({a}, {b}) ")
+                    let (a, b) = neighbour(x, y, p)
+                    let f = jij.[x,y,p]
+                    ignore <| sb.Append($"({a}, {b}) [{f}]")
                 ignore <| sb.AppendLine($"] ")
         ignore <| sb.AppendLine("}")
 
         sb.ToString()
 
-let private context = Ising2DContext.singleton
-let private Jij = 1.0
+let private Jij = JijMatrix.ConstantFerromagnet.Unapply
 
 let interactionEnergy flip (spins : bool[,]) x y =
-    let inline spinEnergy s1 s2 = Jij * if (s1 = s2) then 1.0 else -1.0
-
     let spin' = spins.[x, y]
     let spin = if flip then not spin' else spin'
 
     let mutable energy = 0.0
     for p in 0..3 do
-        let (nx, ny) = context.AdjacencyMatrix.[x, y, p]
-        energy <- energy - spinEnergy spin (spins.[nx, ny])
+        let (nx, ny) = neighbour(x, y, p)
+        let neighbour_spin = spins.[nx, ny]
+        let j = Jij.[x, y, p]
+        energy <- if spin = neighbour_spin then energy - j else energy + j
     energy
-
 
 type Ising2D = {
     Spins : bool[,]
@@ -61,7 +68,7 @@ with
             for x in 0 .. (L - 1) do
                 h <- h + interactionEnergy false spins x y
 
-        { Spins = spins; H = h }
+        Ising2D.Apply spins h
 
     override this.ToString() =
         let sb = System.Text.StringBuilder()
