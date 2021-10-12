@@ -39,7 +39,7 @@ with
             EliteBias        = ensureClamped eliteBias "eliteBias"
         }
 
-    static member Default = EvolutionParameters.Initialize 0.3 0.4 0.4 0.8
+    static member Default = EvolutionParameters.Initialize 0.3 0.40 0.20 0.80
 
 let DefaultEvolutionParameters = EvolutionParameters.Default
 
@@ -119,7 +119,7 @@ with
             |> Array.take eliteCount
 
         let mutants =
-            [| for _ in 0 .. (mutantCount - 1) -> pickRandom (0, eliteCount) |]
+            [| for _ in 0 .. (mutantCount - 1) -> pickRandom (0, populationCount) |]
             |> Array.Parallel.map (pp.MutationFunction ep.MutationBias)
             |> Array.sortBy snd
 
@@ -179,6 +179,7 @@ let Solve<'t, 'f when 'f : comparison> (experimentName : string) (populationPara
             $"{r.Iteration}, {r.BestFitness}, {r.IterationTime}"
             |> output.WriteLine
 
+        printfn $"# {{ Experiment : {experimentName}; Iterations : {num_iterations}; Runtime (ms) : {results.TotalTime}; }}"
         printfn $"Wrote results to {fileName}"
     finally
         output.Flush ()

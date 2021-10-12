@@ -40,9 +40,31 @@ let crossover (eliteBias : double) ((eliteParent, _), (otherParent, _)) =
 
     (Ising2D.Apply spins h, h)
 
+let crossover_block (eliteBias : double) ((eliteParent, _), (otherParent, _)) =
+    let num_crossovers = BRKGA.proportion L (1.0 - eliteBias)
+    let otherParentSpins = otherParent.Spins
+    let mutable spins = Array2D.copy eliteParent.Spins
+    let mutable h = eliteParent.H
+
+    let block_size = BRKGA.proportion L 0.1
+
+    for _ in 0..(num_crossovers - 1) do
+        let (x,y) = (System.Random.Shared.Next(L), System.Random.Shared.Next(L))
+        let inline clamp j = ((x + j + L - 1) % L, (y + j + L - 1) % L)
+
+        for j in -block_size..block_size do
+            let (x', y') = clamp j
+            if (spins.[x', y] <> otherParentSpins.[x', y]) then
+                flipSpin (&spins) (&h) x' y
+            if (spins.[x, y'] <> otherParentSpins.[x, y']) then
+                flipSpin (&spins) (&h) x y'
+
+    (Ising2D.Apply spins h, h)
+
+
 let PopulationParameters : BRKGA.PopulationParameters<_,_> = {
     Comparer = {| first_is_better = (<=); worst_fitness = System.Double.MaxValue |}
-    InitialPopulationCount = 200
+    InitialPopulationCount = 100
     SynthesisFunction = synthesize
     MutationFunction = mutate
     CrossoverFunction = crossover
